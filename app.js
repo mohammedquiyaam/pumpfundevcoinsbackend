@@ -12,7 +12,7 @@ app.listen(PORT, () => {
 
 app.get("/getCoins", async (request, response) => {
     let resp = [];
-    const { dev, all, initialLength, phoneNum } = request.query;
+    const { dev, all, lastCoinMint, phoneNum } = request.query;
 
     response.set('Access-Control-Allow-Origin', "*");
 
@@ -23,11 +23,15 @@ app.get("/getCoins", async (request, response) => {
 
         if (all === 'true') {
             resp = data;
-        } else if (data.length > initialLength) {
+        } else {
             // new coin was added
-            const numberOfCoins = data.length - initialLength
-            for (let i = 0; i < numberOfCoins; i++) {
-                resp.push(newList[i]);
+            for (let i = 0; i < data.length; i++) {
+                const coin = data[i];
+                if (coin.mint == lastCoinMint) {
+                    break;
+                } else {
+                    resp.push(coin);
+                }
             }
         }
     } catch(ex) {
