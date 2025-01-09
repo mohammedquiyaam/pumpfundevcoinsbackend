@@ -101,6 +101,7 @@ async function buyCoin(action, mint, amount, slippage, key){
                 console.log(response.statusText); // log error
             }
         } catch(ex) {
+            console.log(ex);
 
         }
         if (!success) await timeout(3000);
