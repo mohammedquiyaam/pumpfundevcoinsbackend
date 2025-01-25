@@ -22,7 +22,7 @@ app.get("/getCoins", async (request, response) => {
     let resp = {};
     resp.data=[];
     resp.messages = [];
-    const { dev, all, lastCoinMint, buy, key, amount, slippage, phoneNum } = request.query;
+    const { dev, all, lastCoinMint, buy, key, amount, slippage, priorityFee, phoneNum } = request.query;
 
     response.set('Access-Control-Allow-Origin', "*");
 
@@ -44,7 +44,7 @@ app.get("/getCoins", async (request, response) => {
                 } else {
                     resp.data.push(coin);
                     if (buy === 'true'){
-                        const success = await buyCoin("buy", coin.mint, amount, slippage, key)
+                        const success = await buyCoin("buy", coin.mint, amount, slippage, priorityFee, key)
                         if (success) {
                             resp.messages.push("Bought " + amount + " Solana worth of " + coin.name);
                         } else {
@@ -65,7 +65,7 @@ app.get("/getCoins", async (request, response) => {
  });
 
 
-async function buyCoin(action, mint, amount, slippage, key){
+async function buyCoin(action, mint, amount, slippage, priorityFee, key){
     let success = false;
     const signerKeyPair = Keypair.fromSecretKey(bs58.decode(key));
     const signerPublicKey = signerKeyPair.publicKey.toBase58();
@@ -86,7 +86,7 @@ async function buyCoin(action, mint, amount, slippage, key){
                     "denominatedInSol": "true",     // "true" if amount is amount of SOL, "false" if amount is number of tokens
                     "amount": amount,                  // amount of SOL or tokens
                     "slippage": slippage,                  // percent slippage allowed
-                    "priorityFee": 0.0001,          // priority fee
+                    "priorityFee": priorityFee,          // priority fee
                     "pool": "pump"                   // exchange to trade on. "pump" or "raydium"
                 })
             });
