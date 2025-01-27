@@ -31,9 +31,6 @@ app.get("/getCoins", async (request, response) => {
 
         data = await data.json();
 
-        // testing 
-        // await buyCoin("buy", data[0].mint, amount, slippage, key)
-        
         if (all === 'true') {
             resp.data = data;
         } else {
@@ -44,7 +41,7 @@ app.get("/getCoins", async (request, response) => {
                 } else {
                     resp.data.push(coin);
                     if (buy === 'true'){
-                        const success = await buyCoin("buy", coin.mint, amount, slippage, priorityFee, key)
+                        const success = await buyOrSellCoin("buy", coin.mint, amount, slippage, priorityFee, key)
                         if (success) {
                             resp.messages.push("Bought " + amount + " Solana worth of " + coin.name);
                         } else {
@@ -64,14 +61,41 @@ app.get("/getCoins", async (request, response) => {
     response.send(resp);
  });
 
+app.get("/buyAndSell", async (request, response) => {
+    let resp = {};
+    resp.data=[];
+    resp.messages = [];
+    const {key, amount, mint, numberOfTransactions, priorityFee} = request.query;
 
-async function buyCoin(action, mint, amount, slippage, priorityFee, key){
+    response.set('Access-Control-Allow-Origin', "*");
+
+    try {
+        let i = 0;
+        while (i < numberOfTransactions) {
+            let result = await buyOrSellCoin("buy", mint, amount, 30, priorityFee, key)
+            if (result) {
+                await timeout(1000);
+                result = await buyOrSellCoin("sell", mint, amount, 30, priorityFee, key)
+                if (!result) break;
+            } else {
+                break;
+            }
+            await timeout(1000);
+            i++;
+        }
+    } catch(ex) {
+        resp.Error="Error on server";
+    }
+    response.send(resp);
+});
+
+async function buyOrSellCoin(action, mint, amount, slippage, priorityFee, key){
     let success = false;
     const signerKeyPair = Keypair.fromSecretKey(bs58.decode(key));
     const signerPublicKey = signerKeyPair.publicKey.toBase58();
 
     let tries = 0;
-    while (!success && tries < 20) {
+    while (!success && tries < 50) {
         tries++;
         try {
             const response = await fetch(`https://pumpportal.fun/api/trade-local`, {
@@ -95,7 +119,7 @@ async function buyCoin(action, mint, amount, slippage, priorityFee, key){
                 const tx = VersionedTransaction.deserialize(new Uint8Array(data));
                 tx.sign([signerKeyPair]);
                 const signature = await web3Connection.sendTransaction(tx)
-                console.log("Transaction: https://solscan.io/tx/" + signature);
+                console.log("Transaction ("+action+"): https://solscan.io/tx/" + signature);
                 success = true;
             } else {
                 console.log(response.statusText); // log error
@@ -104,7 +128,7 @@ async function buyCoin(action, mint, amount, slippage, priorityFee, key){
             console.log(ex);
 
         }
-        if (!success) await timeout(3000);
+        if (!success) await timeout(500);
     }
     return success;
 }
